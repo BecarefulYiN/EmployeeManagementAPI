@@ -3,5 +3,5 @@
 public class EmployeeRoleRequestModel
 {
     public string? RoleName { get; set; } = null!;
-    public bool IsActive { get; set; }
+
 }
