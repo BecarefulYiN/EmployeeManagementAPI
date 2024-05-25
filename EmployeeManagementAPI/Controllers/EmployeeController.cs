@@ -1,5 +1,6 @@
 ﻿using EmployeeManagementAPI.Models.Entities;
 using EmployeeManagementAPI.Models.RequestModels.Employee;
+using EmployeeManagementAPI.Models.ResponseModesl.Employee;
 using EmployeeManagementAPI.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -20,32 +21,39 @@ public class EmployeeController : ControllerBase
 
     [HttpGet]
     [Route("/api/employee")]
-
     public IActionResult getEmployeeList()
     {
         try
         {
-            string query = @"SELECT [EmployeeId]
-      ,[FirstName]
-      ,[LastName]
-      ,[Email]
-      ,[PhoneNumber]
-      ,[HireDate]
-      ,[DepartmentId]
-      ,[RoleId]
-      ,[IsActive]
-  FROM [dbo].[EmployeeTable] WHERE IsActive = @IsActive";
+            string query = @"
+            SELECT e.[EmployeeId]
+                  ,e.[FirstName]
+                  ,e.[LastName]
+                  ,e.[Email]
+                  ,e.[PhoneNumber]
+                  ,e.[HireDate]
+                  ,d.[DepartmentName] AS DepartmentName
+                  ,r.[RoleName] AS RoleName
+                  ,e.[IsActive]
+            FROM [dbo].[EmployeeTable] e
+            LEFT JOIN [dbo].[DepartmentTable] d ON e.[DepartmentId] = d.[DepartmentId]
+            LEFT JOIN [dbo].[EmployeeRoleTable] r ON e.[RoleId] = r.[RoleId]
+            WHERE e.[IsActive] = @IsActive";
+
             List<SqlParameter> parameters = new()
-            {
-                new SqlParameter("@IsActive", true)
-            };
-            List<EmployeeModel> lst = _adoDotNetServices.Query<EmployeeModel>(query, parameters.ToArray());
-            return Ok(lst);
-        } catch (Exception ex)
         {
-            throw new Exception(ex.Message);
+            new SqlParameter("@IsActive", true)
+        };
+
+            List<GetEmployeeResponseModel> lst = _adoDotNetServices.Query<GetEmployeeResponseModel>(query, parameters.ToArray());
+            return Ok(lst);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
         }
     }
+
 
     [HttpPost]
     [Route("/api/create-employee")]
