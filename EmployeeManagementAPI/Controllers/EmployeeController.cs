@@ -84,6 +84,42 @@ public class EmployeeController : ControllerBase
                 return Conflict("Employee with this phone number already exist!");
             }
 
+            // Check if RoleId exists in EmployeeRoleTable
+            if (requestModel.RoleId.GetValueOrDefault() != 0)
+            {
+                string roleQuery = @"SELECT [RoleId] FROM [dbo].[EmployeeRoleTable] WHERE [RoleId] = @RoleId ANd IsActive = @IsActive";
+                List<SqlParameter> roleParameters = new()
+                {
+                    new SqlParameter("@RoleId", requestModel.RoleId),
+                    new SqlParameter("@IsActive", true)
+                };
+
+                DataTable role = _adoDotNetServices.QueryFirstOrDefault(roleQuery, roleParameters.ToArray());
+                if (role.Rows.Count == 0)
+                {
+                    return BadRequest("Invalid RoleId");
+                }
+            }
+
+            // Check if DepartmentId exists in DepartmentTable
+            if (requestModel.DepartmentId.GetValueOrDefault() != 0)
+            {
+                string departmentQuery = @"SELECT [DepartmentId]
+      ,[DepartmentName]
+  FROM [dbo].[DepartmentTable] WHERE [DepartmentId] = @DepartmentId ANd IsActive = @IsActive";
+                List<SqlParameter> departmentParameters = new()
+                {
+                    new SqlParameter("@DepartmentId", requestModel.DepartmentId),
+                    new SqlParameter("@IsActive", true)
+                };
+
+                DataTable role = _adoDotNetServices.QueryFirstOrDefault(departmentQuery, departmentParameters.ToArray());
+                if (role.Rows.Count == 0)
+                {
+                    return BadRequest("Invalid Department");
+                }
+            }
+
             // Set DepartmentId and RoleId to NULL if they are 0
             object? departmentId = requestModel.DepartmentId.GetValueOrDefault() == 0 ? DBNull.Value : requestModel.DepartmentId;
             object? roleId = requestModel.RoleId.GetValueOrDefault() == 0 ? DBNull.Value : requestModel.RoleId;
