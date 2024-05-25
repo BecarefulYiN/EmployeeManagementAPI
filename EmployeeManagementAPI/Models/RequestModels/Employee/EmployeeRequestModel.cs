@@ -1,8 +1,7 @@
-﻿namespace EmployeeManagementAPI.Models.Entities;
+﻿namespace EmployeeManagementAPI.Models.RequestModels.Employee;
 
-public class EmployeeModel
+public class EmployeeRequestModel
 {
-    public long EmployeeId { get; set; }
 
     public string FirstName { get; set; } = null!;
 
@@ -11,10 +10,9 @@ public class EmployeeModel
     public string Email { get; set; } = null!;
 
     public string PhoneNumber { get; set; } = null!;
-    public DateTime HireDate { get; set; } 
 
     public long? DepartmentId { get; set; } = null!;
 
     public long? RoleId { get; set; } = null!;
-    public bool IsActive { get; set; } 
+
 }
