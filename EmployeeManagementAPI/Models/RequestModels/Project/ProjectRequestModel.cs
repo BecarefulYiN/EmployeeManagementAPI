@@ -2,5 +2,5 @@
 
 public class ProjectRequestModel
 {
-    public string ProjectName { get; set; }
+    public string? ProjectName { get; set; }
 }
