@@ -2,6 +2,7 @@
 using EmployeeManagementAPI.Models.RequestModels.Employee;
 using EmployeeManagementAPI.Models.ResponseModesl.Employee;
 using EmployeeManagementAPI.Services;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -10,6 +11,7 @@ using System.Reflection.Metadata;
 
 namespace EmployeeManagementAPI.Controllers;
 
+[EnableCors("AllowLocalhost3000")]
 public class EmployeeController : ControllerBase
 {
     private readonly AdoDotNetServices _adoDotNetServices;
@@ -62,108 +64,110 @@ public class EmployeeController : ControllerBase
         try
         {
             if (string.IsNullOrEmpty(requestModel.FirstName))
-                return BadRequest("FirstName does't not allow empty");
+                return BadRequest("FirstName does not allow empty");
             if (string.IsNullOrEmpty(requestModel.LastName))
-                return BadRequest("LastName does't not allow empty");
+                return BadRequest("LastName does not allow empty");
             if (string.IsNullOrEmpty(requestModel.PhoneNumber))
-                return BadRequest("PhoneNumber does't not allow empty");
+                return BadRequest("PhoneNumber does not allow empty");
             if (string.IsNullOrEmpty(requestModel.Email))
-                return BadRequest("Email does't not allow empty");
+                return BadRequest("Email does not allow empty");
 
-            string duplicateQuery = @"SELECT [EmployeeId]
-      ,[FirstName]
-      ,[LastName]
-      ,[Email]
-      ,[PhoneNumber]
-      ,[HireDate]
-      ,[DepartmentId]
-      ,[RoleId]
-      ,[IsActive]
-  FROM [dbo].[EmployeeTable] WHERE Email = @Email";
+            string duplicateQuery = @"SELECT [EmployeeId] FROM [dbo].[EmployeeTable] WHERE Email = @Email";
 
             List<SqlParameter> duplicateParameters = new()
-            {
-                new SqlParameter("@Email", requestModel.Email)
-            };
+        {
+            new SqlParameter("@Email", requestModel.Email)
+        };
 
-            DataTable Employee = _adoDotNetServices.QueryFirstOrDefault(duplicateQuery, duplicateParameters.ToArray());
-            if (Employee.Rows.Count > 0)
+            DataTable employee = _adoDotNetServices.QueryFirstOrDefault(duplicateQuery, duplicateParameters.ToArray());
+            if (employee.Rows.Count > 0)
             {
-                return Conflict("Employee with this phone number already exist!");
+                return Conflict("Employee with this email already exists!");
             }
 
-            // Check if RoleId exists in EmployeeRoleTable
-            if (requestModel.RoleId.GetValueOrDefault() != 0)
+            // Check or insert Role
+            object? roleId = DBNull.Value;
+            if (!string.IsNullOrEmpty(requestModel.RoleName))
             {
-                string roleQuery = @"SELECT [RoleId] FROM [dbo].[EmployeeRoleTable] WHERE [RoleId] = @RoleId ANd IsActive = @IsActive";
+                string roleQuery = @"SELECT [RoleId] FROM [dbo].[EmployeeRoleTable] WHERE [RoleName] = @RoleName AND IsActive = @IsActive";
                 List<SqlParameter> roleParameters = new()
-                {
-                    new SqlParameter("@RoleId", requestModel.RoleId),
-                    new SqlParameter("@IsActive", true)
-                };
+            {
+                new SqlParameter("@RoleName", requestModel.RoleName),
+                new SqlParameter("@IsActive", true)
+            };
 
                 DataTable role = _adoDotNetServices.QueryFirstOrDefault(roleQuery, roleParameters.ToArray());
                 if (role.Rows.Count == 0)
                 {
-                    return BadRequest("Invalid RoleId");
+                    // Insert the new role
+                    string insertRoleQuery = @"INSERT INTO [dbo].[EmployeeRoleTable] ([RoleName], [IsActive]) VALUES (@RoleName, @IsActive);
+                                           SELECT SCOPE_IDENTITY();";
+                    roleId = _adoDotNetServices.Execute(insertRoleQuery, roleParameters.ToArray());
+                }
+                else
+                {
+                    roleId = role.Rows[0]["RoleId"];
                 }
             }
 
-            // Check if DepartmentId exists in DepartmentTable
-            if (requestModel.DepartmentId.GetValueOrDefault() != 0)
+            // Check or insert Department
+            object? departmentId = DBNull.Value;
+            if (!string.IsNullOrEmpty(requestModel.DepartmentName))
             {
-                string departmentQuery = @"SELECT [DepartmentId]
-      ,[DepartmentName]
-  FROM [dbo].[DepartmentTable] WHERE [DepartmentId] = @DepartmentId ANd IsActive = @IsActive";
+                string departmentQuery = @"SELECT [DepartmentId] FROM [dbo].[DepartmentTable] WHERE [DepartmentName] = @DepartmentName AND IsActive = @IsActive";
                 List<SqlParameter> departmentParameters = new()
-                {
-                    new SqlParameter("@DepartmentId", requestModel.DepartmentId),
-                    new SqlParameter("@IsActive", true)
-                };
+            {
+                new SqlParameter("@DepartmentName", requestModel.DepartmentName),
+                new SqlParameter("@IsActive", true)
+            };
 
-                DataTable role = _adoDotNetServices.QueryFirstOrDefault(departmentQuery, departmentParameters.ToArray());
-                if (role.Rows.Count == 0)
+                DataTable department = _adoDotNetServices.QueryFirstOrDefault(departmentQuery, departmentParameters.ToArray());
+                if (department.Rows.Count == 0)
                 {
-                    return BadRequest("Invalid Department");
+                    // Insert the new department
+                    string insertDepartmentQuery = @"INSERT INTO [dbo].[DepartmentTable] ([DepartmentName], [IsActive]) VALUES (@DepartmentName, @IsActive);
+                                                 SELECT SCOPE_IDENTITY();";
+                    departmentId = _adoDotNetServices.Execute(insertDepartmentQuery, departmentParameters.ToArray());
+                }
+                else
+                {
+                    departmentId = department.Rows[0]["DepartmentId"];
                 }
             }
 
-            // Set DepartmentId and RoleId to NULL if they are 0
-            object? departmentId = requestModel.DepartmentId.GetValueOrDefault() == 0 ? DBNull.Value : requestModel.DepartmentId;
-            object? roleId = requestModel.RoleId.GetValueOrDefault() == 0 ? DBNull.Value : requestModel.RoleId;
-
-           
             string query = @"INSERT INTO [dbo].[EmployeeTable]
-                                  ([FirstName], [LastName], [Email], [PhoneNumber], [HireDate], [DepartmentId], [RoleId], [IsActive])
-                                  VALUES
-                                  (@FirstName, @LastName, @Email, @PhoneNumber, @HireDate, @DepartmentId, @RoleId, @IsActive);
-                                  SELECT SCOPE_IDENTITY();";
+                                ([FirstName], [LastName], [Email], [PhoneNumber], [HireDate], [DepartmentId], [RoleId], [IsActive])
+                                VALUES
+                                (@FirstName, @LastName, @Email, @PhoneNumber, @HireDate, @DepartmentId, @RoleId, @IsActive);
+                                SELECT SCOPE_IDENTITY();";
 
             List<SqlParameter> parameters = new()
-                {
-                    new SqlParameter("@FirstName", requestModel.FirstName),
-                    new SqlParameter("@LastName", requestModel.LastName),
-                    new SqlParameter("@Email", requestModel.Email),
-                    new SqlParameter("@PhoneNumber", requestModel.PhoneNumber),
-                    new SqlParameter("@HireDate", DateTime.Now),
-                    new SqlParameter("@DepartmentId", departmentId),
-                    new SqlParameter("@RoleId", roleId),
-                    new SqlParameter("@IsActive", true)
-                };
+        {
+            new SqlParameter("@FirstName", requestModel.FirstName),
+            new SqlParameter("@LastName", requestModel.LastName),
+            new SqlParameter("@Email", requestModel.Email),
+            new SqlParameter("@PhoneNumber", requestModel.PhoneNumber),
+            new SqlParameter("@HireDate", DateTime.Now),
+            new SqlParameter("@DepartmentId", departmentId),
+            new SqlParameter("@RoleId", roleId),
+            new SqlParameter("@IsActive", true)
+        };
 
             int result = _adoDotNetServices.Execute(query, parameters.ToArray());
-            return result > 0 ? StatusCode(201, "Create successfully") : BadRequest("Create faill");
+            return result > 0 ? StatusCode(201, "Create successfully") : BadRequest("Create failed");
         }
         catch (Exception ex)
         {
-            throw new Exception(ex.Message);
+            return StatusCode(500, ex.Message);
         }
     }
+
+
 
     [HttpPut]
     [Route("/api/employee-info-update/{id}")]
 
-    public IActionResult UpdateEmployee([FromBody] EmployeeRequestModel requestModel,long id)
+    public IActionResult UpdateEmployee([FromBody] EmployeeUpdateRequestModel requestModel,long id)
     {
         try
         {
