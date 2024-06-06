@@ -25,14 +25,25 @@ public class DepartmentController : ControllerBase
     {
         try
         {
-            string query = @"SELECT [DepartmentId]
-      ,[DepartmentName]
-      ,[IsActive]
-  FROM [dbo].[DepartmentTable] WHERE IsActive = @IsActive;";
+            string query = @"
+            SELECT 
+                d.[DepartmentId],
+                d.[DepartmentName],
+                d.[IsActive],
+                COUNT(e.[EmployeeId]) AS EmployeeCount
+            FROM 
+                [dbo].[DepartmentTable] d
+            LEFT JOIN 
+                [dbo].[EmployeeTable] e ON d.[DepartmentId] = e.[DepartmentId]
+            WHERE 
+                d.[IsActive] = @IsActive
+            GROUP BY 
+                d.[DepartmentId], d.[DepartmentName], d.[IsActive]";
+
             List<SqlParameter> parameters = new()
-            {
-                new SqlParameter("@IsActive", true)
-            };
+        {
+            new SqlParameter("@IsActive", true)
+        };
 
             List<DepartmentModel> lst = _adoDotNetServices.Query<DepartmentModel>(query, parameters.ToArray());
             return Ok(lst);
@@ -42,6 +53,7 @@ public class DepartmentController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
         }
     }
+
 
     [HttpPost]
     [Route("/api/create-department")]

@@ -71,13 +71,21 @@ public class AttendanceController : ControllerBase
     {
         try
         {
-            string query = @"SELECT [AttendanceId], [EmployeeId], [Date], [Status]
-                         FROM [dbo].[AttendanceTable]";
+            string query = @"
+            SELECT 
+                A.AttendanceId, 
+                E.FirstName + ' ' + E.LastName AS EmployeeName,
+                E.Email,
+                A.Date,
+                A.Status
+            FROM 
+                [dbo].[AttendanceTable] A
+            JOIN 
+                [dbo].[EmployeeTable] E
+            ON 
+                A.EmployeeId = E.EmployeeId";
 
-            List<SqlParameter> parameters = new()
-            {
-
-            };
+            List<SqlParameter> parameters = new();
 
             List<AttendanceModel> lst = _adoDotNetServices.Query<AttendanceModel>(query, parameters.ToArray());
             return Ok(lst);
@@ -129,7 +137,7 @@ public class AttendanceController : ControllerBase
     // Helper method to validate status
     private bool IsValidStatus(string status)
     {
-        return status == "Present" || status == "Absent";
+        return status == "present" || status == "absent";
     }
 }
 
