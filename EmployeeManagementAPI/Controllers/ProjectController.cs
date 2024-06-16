@@ -51,6 +51,38 @@ public class ProjectController : ControllerBase
     }
 
     [HttpGet]
+    [Route("/api/project/{id}")]
+    public IActionResult GetProjectById(int id)
+    {
+        try
+        {
+            string query = @"
+        SELECT [ProjectId]
+              ,[ProjectName]
+              ,[StartDate]
+              ,CASE 
+                   WHEN [Status] IS NULL THEN 'Ongoing' 
+                   ELSE CONVERT(varchar, [Status], 23) 
+               END AS [Status]
+              ,[IsActive]
+        FROM [dbo].[ProjectTable] 
+        WHERE ProjectId = @ProjectId";
+
+            List<SqlParameter> parameters = new()
+        {
+            new SqlParameter("@ProjectId", id)
+        };
+
+            List<ProjectModel> projects = _adoDotNetServices.Query<ProjectModel>(query, parameters.ToArray());
+            return Ok(projects);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+        }
+    }
+
+    [HttpGet]
     [Route("/api/ended-projects")]
     public IActionResult GetEndedProjects()
     {

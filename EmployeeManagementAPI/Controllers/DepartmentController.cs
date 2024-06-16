@@ -1,6 +1,7 @@
 ﻿using EmployeeManagementAPI.Models.Entities;
 using EmployeeManagementAPI.Models.RequestModels.Department;
 using EmployeeManagementAPI.Models.RequestModels.Employee_Role;
+using EmployeeManagementAPI.Models.ResponseModesl.Department;
 using EmployeeManagementAPI.Models.ResponseModesl.Employee;
 using EmployeeManagementAPI.Services;
 using Microsoft.AspNetCore.Http;
@@ -54,11 +55,49 @@ public class DepartmentController : ControllerBase
         }
     }
 
+    [HttpGet]
+    [Route("/api/department/{id}")]
+    public IActionResult GetDepartmentById(int id)
+    {
+        try
+        {
+            string query = @"
+        SELECT 
+            d.[DepartmentId],
+            d.[DepartmentName],
+            d.[IsActive],
+            COUNT(e.[EmployeeId]) AS EmployeeCount
+        FROM 
+            [dbo].[DepartmentTable] d
+        LEFT JOIN 
+            [dbo].[EmployeeTable] e ON d.[DepartmentId] = e.[DepartmentId]
+        WHERE 
+            d.[DepartmentId] = @DepartmentId
+        GROUP BY 
+            d.[DepartmentId], d.[DepartmentName], d.[IsActive]";
+
+            List<SqlParameter> parameters = new()
+        {
+            new SqlParameter("@DepartmentId", id)
+        };
+
+            List<GetDepartmentResponseModel> lst = _adoDotNetServices.Query<GetDepartmentResponseModel>(query, parameters.ToArray());
+
+            return Ok(lst);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+        }
+    }
+
+
+
 
     [HttpPost]
     [Route("/api/create-department")]
 
-    public IActionResult createDepartment([FromBody] DepartmentRequestModel requestModel)
+    public IActionResult CreateDepartment([FromBody] DepartmentRequestModel requestModel)
     {
         try
         {
