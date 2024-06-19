@@ -1,10 +1,10 @@
-﻿using EmployeeManagementAPI.Models.Entities;
-using EmployeeManagementAPI.Models.RequestModels.EMployeeProject;
-using EmployeeManagementAPI.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
+using EmployeeManagementAPI.Models.Entities;
+using EmployeeManagementAPI.Models.RequestModels.EMployeeProject;
+using EmployeeManagementAPI.Queries;
+using EmployeeManagementAPI.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EmployeeManagementAPI.Controllers;
 
@@ -19,27 +19,25 @@ public class EmployeeProjectController : ControllerBase
 
     [HttpGet]
     [Route("/api/employee-project-list")]
-
     public IActionResult GetEmployeeProjectList()
     {
-        try { 
-        string query = @"SELECT [EmployeeId]
-      ,[ProjectId]
-  FROM [dbo].[EmployeeProjectTable] 
-            WHERE IsActive = @IsActive";
-
-        List<SqlParameter> parameters = new()
+        try
         {
-            new SqlParameter("@IsActive", true)
-        };
+            string query = EmployeeProjectQuery.GetEmployeeProjectListQuery();
 
-        List<EmployeeProjectModel> projects = _adoDotNetServices.Query<EmployeeProjectModel>(query, parameters.ToArray());
-        return Ok(projects);
-    }
+            List<SqlParameter> parameters = new() { new SqlParameter("@IsActive", true) };
+
+            List<EmployeeProjectModel> projects = _adoDotNetServices.Query<EmployeeProjectModel>(
+                query,
+                parameters.ToArray()
+            );
+
+            return Ok(projects);
+        }
         catch (Exception ex)
         {
             return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-}
+        }
     }
 
     [HttpPut]
@@ -48,94 +46,109 @@ public class EmployeeProjectController : ControllerBase
     {
         try
         {
-            if (!requestModel.EmployeeId.HasValue || !requestModel.ProjectId.HasValue)
+            //if (!requestModel.EmployeeId.HasValue || !requestModel.ProjectId.HasValue)
+            //    return BadRequest("All need to be fill");
+
+            if (requestModel.EmployeeId <= 0 || requestModel.ProjectId <= 0)
                 return BadRequest("All need to be fill");
 
             // Check if the employee exists
-            string checkEmployeeQuery = @"SELECT COUNT(*) FROM [dbo].[EmployeeTable] WHERE EmployeeId = @EmployeeId AND IsActive = @IsActive";
-            List<SqlParameter> employeeParameters = new()
-            {
-                new SqlParameter("@EmployeeId", requestModel.EmployeeId),
-                new SqlParameter("@IsActive", true)
-            };
-            int employeeCount = Convert.ToInt32(_adoDotNetServices.QueryFirstOrDefault(checkEmployeeQuery, employeeParameters.ToArray()).Rows[0][0]);
+            string checkEmployeeQuery = EmployeeProjectQuery.GetCheckEmployeeExistsQuery();
+            List<SqlParameter> employeeParameters =
+                new()
+                {
+                    new SqlParameter("@EmployeeId", requestModel.EmployeeId),
+                    new SqlParameter("@IsActive", true)
+                };
+            int employeeCount = Convert.ToInt32(
+                _adoDotNetServices
+                    .QueryFirstOrDefault(checkEmployeeQuery, employeeParameters.ToArray())
+                    .Rows[0][0]
+            );
             if (employeeCount == 0)
                 return BadRequest("Employee does not exist");
 
             // Check if the project exists
-            string checkProjectQuery = @"SELECT COUNT(*) FROM [dbo].[ProjectTable] WHERE ProjectId = @ProjectId AND IsActive = @IsActive";
-            List<SqlParameter> projectParameters = new()
-            {
-                new SqlParameter("@ProjectId", requestModel.ProjectId),
-                new SqlParameter("@IsActive", true)
-            };
-            int projectCount = Convert.ToInt32(_adoDotNetServices.QueryFirstOrDefault(checkProjectQuery, projectParameters.ToArray()).Rows[0][0]);
+            string checkProjectQuery = EmployeeProjectQuery.GetCheckProjectExistsQuery();
+            List<SqlParameter> projectParameters =
+                new()
+                {
+                    new SqlParameter("@ProjectId", requestModel.ProjectId),
+                    new SqlParameter("@IsActive", true)
+                };
+            int projectCount = Convert.ToInt32(
+                _adoDotNetServices
+                    .QueryFirstOrDefault(checkProjectQuery, projectParameters.ToArray())
+                    .Rows[0][0]
+            );
             if (projectCount == 0)
                 return BadRequest("Project does not exist");
 
             // Check for duplicate employee-project association
-            string duplicateQuery = @"SELECT [EmployeeId], [ProjectId], [IsActive]
-                                      FROM [dbo].[EmployeeProjectTable]
-                                      WHERE EmployeeId = @EmployeeId AND ProjectId = @ProjectId AND IsActive = @IsActive";
+            string duplicateQuery =
+                EmployeeProjectQuery.GetCheckDuplicateEmployeeProjectAssociation();
 
-            List<SqlParameter> duplicateParameters = new()
-            {
-                new SqlParameter("@EmployeeId", requestModel.EmployeeId),
-                new SqlParameter("@ProjectId", requestModel.ProjectId),
-                new SqlParameter("@IsActive", true)
-            };
+            List<SqlParameter> duplicateParameters =
+                new()
+                {
+                    new SqlParameter("@EmployeeId", requestModel.EmployeeId),
+                    new SqlParameter("@ProjectId", requestModel.ProjectId),
+                    new SqlParameter("@IsActive", true)
+                };
 
-            DataTable employeeProjects = _adoDotNetServices.QueryFirstOrDefault(duplicateQuery, duplicateParameters.ToArray());
+            DataTable employeeProjects = _adoDotNetServices.QueryFirstOrDefault(
+                duplicateQuery,
+                duplicateParameters.ToArray()
+            );
             if (employeeProjects.Rows.Count > 0)
                 return BadRequest("For this employee, project association already exists");
 
             // Insert new employee-project association
-            string query = @"INSERT INTO [dbo].[EmployeeProjectTable]
-                             ([EmployeeId], [ProjectId], [IsActive])
-                             VALUES (@EmployeeId, @ProjectId, @IsActive)";
+            string query = EmployeeProjectQuery.GetInsertEmployeeProjectQuery();
 
-            List<SqlParameter> parameters = new()
-            {
-                new SqlParameter("@EmployeeId", requestModel.EmployeeId),
-                new SqlParameter("@IsActive", true),
-                new SqlParameter("@ProjectId", requestModel.ProjectId)
-            };
+            List<SqlParameter> parameters =
+                new()
+                {
+                    new SqlParameter("@EmployeeId", requestModel.EmployeeId),
+                    new SqlParameter("@IsActive", true),
+                    new SqlParameter("@ProjectId", requestModel.ProjectId)
+                };
 
             int result = _adoDotNetServices.Execute(query, parameters.ToArray());
-            return result > 0 ? StatusCode(201, "Create Successfully") : BadRequest("Create Fail");
+
+            return result > 0
+                ? StatusCode(201, "Creating Successfully")
+                : BadRequest("Creating Fail");
         }
         catch (Exception ex)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            return StatusCode(500, ex.Message);
         }
     }
 
     [HttpPut]
     [Route("/api/delete-employee-project/{employeeId}/{projectId}")]
-
     public IActionResult DeleteProject(long projectId, long employeeId)
     {
         try
         {
-            string query = @"UPDATE [dbo].[EmployeeProjectTable]
-   SET IsActive = @IsActive
- WHERE ProjectId = @ProjectId AND EmployeeId = @EmployeeId";
-
-            List<SqlParameter> parameter = new()
-            {
-
-                new SqlParameter("@IsActive", false),
-                new SqlParameter("@ProjectId", projectId),
-                new SqlParameter("@EmployeeId", employeeId)
-
-            };
-
+            string query = EmployeeProjectQuery.GetDeleteEmployeeProjectQuery();
+            List<SqlParameter> parameter =
+                new()
+                {
+                    new SqlParameter("@IsActive", false),
+                    new SqlParameter("@ProjectId", projectId),
+                    new SqlParameter("@EmployeeId", employeeId)
+                };
             int result = _adoDotNetServices.Execute(query, parameter.ToArray());
-            return result > 0 ? StatusCode(201, "Delete Successful") : BadRequest("Delete Fail");
+
+            return result > 0
+                ? StatusCode(201, "Deleting Successful")
+                : BadRequest("Deleting Fail");
         }
         catch (Exception ex)
         {
-            throw new Exception(ex.Message);
+            return StatusCode(500, ex.Message);
         }
     }
 }

@@ -1,9 +1,10 @@
-﻿using EmployeeManagementAPI.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using System.Data;
 using System.Data.SqlClient;
-using System.Data;
+using EmployeeManagementAPI.Enums;
 using EmployeeManagementAPI.Models.RequestModels.LogIn;
+using EmployeeManagementAPI.Queries;
+using EmployeeManagementAPI.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EmployeeManagementAPI.Controllers;
 
@@ -16,44 +17,27 @@ public class LogInController : ControllerBase
         _adoDotNetServices = adoDotNetServices;
     }
 
-
     [HttpPost]
-    [Route("/api/check-login")]
+    [Route("/api/account/login")]
     public IActionResult CheckLogin([FromBody] LogInRequestModel loginRequest)
     {
         try
         {
-            if (string.IsNullOrEmpty(loginRequest.Email))
+            if (loginRequest.Email.IsNullOrEmpty())
                 return BadRequest("Email cannot be empty");
 
-            // Check if email exists and get role
-            string query = @"
-                    SELECT 
-                        e.Email, 
-                        r.RoleName 
-                    FROM 
-                        EmployeeTable e
-                    JOIN 
-                        EmployeeRoleTable r 
-                    ON 
-                        e.RoleId = r.RoleId 
-                    WHERE 
-                        e.Email = @Email";
+            string query = UserQuery.LoginQuery();
 
-            List<SqlParameter> parameters = new()
-                {
-                    new SqlParameter("@Email", loginRequest.Email)
-                };
+            List<SqlParameter> parameters =
+                new() { new SqlParameter("@Email", loginRequest.Email) };
 
             DataTable result = _adoDotNetServices.QueryFirstOrDefault(query, parameters.ToArray());
 
             if (result.Rows.Count == 0)
-            {
                 return NotFound("Email not found");
-            }
 
             string roleName = result.Rows[0]["RoleName"].ToString()!;
-            bool isAdmin = roleName.ToLower() == "admin";
+            bool isAdmin = roleName == EnumUserRole.Admin.ToString();
 
             return Ok(isAdmin);
         }

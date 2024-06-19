@@ -3,5 +3,4 @@
 public class EmployeeRoleRequestModel
 {
     public string? RoleName { get; set; } = null!;
-
 }
