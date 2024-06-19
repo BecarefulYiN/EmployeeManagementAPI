@@ -1,10 +1,10 @@
-﻿namespace EmployeeManagementAPI.Queries
+﻿namespace EmployeeManagementAPI.Queries;
+
+public class UserQuery
 {
-    public class UserQuery
+    public static string LoginQuery()
     {
-        public static string LoginQuery()
-        {
-            return @"
+        return @"
                     SELECT 
                         e.Email, 
                         r.RoleName 
@@ -16,6 +16,5 @@
                         e.RoleId = r.RoleId 
                     WHERE 
                         e.Email = @Email";
-        }
     }
 }
