@@ -2,7 +2,7 @@
 using EmployeeManagementAPI.Models.RequestModels.Department;
 using EmployeeManagementAPI.Models.RequestModels.Employee_Role;
 using EmployeeManagementAPI.Models.ResponseModels.Department;
-using EmployeeManagementAPI.Models.ResponseModesl.Employee;
+using EmployeeManagementAPI.Models.ResponseModels.Employee;
 using EmployeeManagementAPI.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
