@@ -23,7 +23,7 @@ public class EmployeeRoleController : ControllerBase
     {
         try
         {
-            string query = EmployeeQuery.GetEmployeeRoleListQuery();
+            string query = EmployeeRoleQuery.GetEmployeeRoleListQuery();
             List<SqlParameter> parameters = new() { new SqlParameter("@IsActive", true) };
             List<EmployeeRoleModel> lst = _adoDotNetServices.Query<EmployeeRoleModel>(
                 query,
@@ -47,7 +47,7 @@ public class EmployeeRoleController : ControllerBase
             if (requestModel.RoleName!.IsNullOrEmpty())
                 return BadRequest("Role Name doesn't not allow empty");
 
-            string duplicateQuery = EmployeeQuery.GetDuplicateEmployeeQuery();
+            string duplicateQuery = EmployeeRoleQuery.GetDuplicateEmployeeQuery();
 
             List<SqlParameter> duplicateParameters =
                 new() { new SqlParameter("@RoleName", requestModel.RoleName!.ToLower()) };
@@ -59,7 +59,7 @@ public class EmployeeRoleController : ControllerBase
             if (Roles.Rows.Count > 0)
                 return Conflict("This roles already exist!");
 
-            string query = EmployeeQuery.GetInsertEmployeeQuery();
+            string query = EmployeeRoleQuery.GetInsertEmployeeQuery();
 
             List<SqlParameter> parameters =
                 new()
@@ -86,7 +86,7 @@ public class EmployeeRoleController : ControllerBase
     {
         try
         {
-            string checkExistQuery = EmployeeQuery.GetCheckEmployeeExistQuery();
+            string checkExistQuery = EmployeeRoleQuery.GetCheckEmployeeExistQuery();
 
             List<SqlParameter> existenceParameters = new() { new SqlParameter("@RoleId", id) };
 
@@ -100,7 +100,7 @@ public class EmployeeRoleController : ControllerBase
             if (string.IsNullOrEmpty(requestModel.RoleName))
                 return BadRequest("Role Name does not allow empty");
 
-            string duplicateRoleQuery = EmployeeQuery.GetDuplicateRoleQuery();
+            string duplicateRoleQuery = EmployeeRoleQuery.GetDuplicateRoleQuery();
 
             List<SqlParameter> duplicateRoleParameters =
                 new()
@@ -116,7 +116,7 @@ public class EmployeeRoleController : ControllerBase
             if (duplicateCount > 0)
                 return Conflict("This role already exists");
 
-            string updateQuery = EmployeeQuery.GetUpdateEmployeeQuery();
+            string updateQuery = EmployeeRoleQuery.GetUpdateEmployeeQuery();
             List<SqlParameter> updateParameters =
                 new()
                 {
@@ -142,7 +142,7 @@ public class EmployeeRoleController : ControllerBase
     {
         try
         {
-            string query = EmployeeQuery.GetDeleteEmployeeQuery();
+            string query = EmployeeRoleQuery.GetDeleteEmployeeQuery();
 
             List<SqlParameter> parameter =
                 new() { new SqlParameter("@IsActive", false), new SqlParameter("@RoleId", id) };
