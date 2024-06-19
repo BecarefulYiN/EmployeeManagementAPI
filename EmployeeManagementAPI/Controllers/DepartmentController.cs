@@ -1,13 +1,11 @@
-﻿using EmployeeManagementAPI.Models.Entities;
-using EmployeeManagementAPI.Models.RequestModels.Department;
-using EmployeeManagementAPI.Models.RequestModels.Employee_Role;
-using EmployeeManagementAPI.Models.ResponseModels.Department;
-using EmployeeManagementAPI.Models.ResponseModels.Employee;
-using EmployeeManagementAPI.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
+using EmployeeManagementAPI.Models.Entities;
+using EmployeeManagementAPI.Models.RequestModels.Department;
+using EmployeeManagementAPI.Models.ResponseModels.Department;
+using EmployeeManagementAPI.Queries;
+using EmployeeManagementAPI.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EmployeeManagementAPI.Controllers;
 
@@ -22,36 +20,23 @@ public class DepartmentController : ControllerBase
 
     [HttpGet]
     [Route("/api/department")]
-    public IActionResult getDepartmentList()
+    public IActionResult GetDepartmentList()
     {
         try
         {
-            string query = @"
-            SELECT 
-                d.[DepartmentId],
-                d.[DepartmentName],
-                d.[IsActive],
-                COUNT(e.[EmployeeId]) AS EmployeeCount
-            FROM 
-                [dbo].[DepartmentTable] d
-            LEFT JOIN 
-                [dbo].[EmployeeTable] e ON d.[DepartmentId] = e.[DepartmentId]
-            WHERE 
-                d.[IsActive] = @IsActive
-            GROUP BY 
-                d.[DepartmentId], d.[DepartmentName], d.[IsActive]";
+            string query = DepartmentQuery.GetDepartmentListQuery();
+            List<SqlParameter> parameters = new() { new SqlParameter("@IsActive", true) };
 
-            List<SqlParameter> parameters = new()
-        {
-            new SqlParameter("@IsActive", true)
-        };
+            List<DepartmentModel> lst = _adoDotNetServices.Query<DepartmentModel>(
+                query,
+                parameters.ToArray()
+            );
 
-            List<DepartmentModel> lst = _adoDotNetServices.Query<DepartmentModel>(query, parameters.ToArray());
             return Ok(lst);
         }
         catch (Exception ex)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            return StatusCode(500, ex.Message);
         }
     }
 
@@ -61,81 +46,61 @@ public class DepartmentController : ControllerBase
     {
         try
         {
-            string query = @"
-        SELECT 
-            d.[DepartmentId],
-            d.[DepartmentName],
-            d.[IsActive],
-            COUNT(e.[EmployeeId]) AS EmployeeCount
-        FROM 
-            [dbo].[DepartmentTable] d
-        LEFT JOIN 
-            [dbo].[EmployeeTable] e ON d.[DepartmentId] = e.[DepartmentId]
-        WHERE 
-            d.[DepartmentId] = @DepartmentId
-        GROUP BY 
-            d.[DepartmentId], d.[DepartmentName], d.[IsActive]";
+            string query = DepartmentQuery.GetDepartmentByIdQuery();
+            List<SqlParameter> parameters = new() { new SqlParameter("@DepartmentId", id) };
 
-            List<SqlParameter> parameters = new()
-        {
-            new SqlParameter("@DepartmentId", id)
-        };
-
-            List<GetDepartmentResponseModel> lst = _adoDotNetServices.Query<GetDepartmentResponseModel>(query, parameters.ToArray());
+            List<GetDepartmentResponseModel> lst =
+                _adoDotNetServices.Query<GetDepartmentResponseModel>(query, parameters.ToArray());
 
             return Ok(lst);
         }
         catch (Exception ex)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            return StatusCode(500, ex.Message);
         }
     }
 
-
-
-
     [HttpPost]
     [Route("/api/create-department")]
-
     public IActionResult CreateDepartment([FromBody] DepartmentRequestModel requestModel)
     {
         try
         {
-            if (string.IsNullOrEmpty(requestModel.DepartmentName)) return BadRequest("Department need to be fill");
+            if (requestModel.DepartmentName.IsNullOrEmpty())
+                return BadRequest("Department need to be fill");
 
-            string duplicateQuery = @"SELECT [DepartmentId]
-      ,[DepartmentName]
-      ,[IsActive]
-  FROM [dbo].[DepartmentTable] WHERE DepartmentName = @DepartmentName AND IsActive = @IsActive";
+            string duplicateQuery = DepartmentQuery.GetCheckDepartmentNameDuplicateQuery();
+            List<SqlParameter> duplicateParameters =
+                new()
+                {
+                    new SqlParameter("@DepartmentName", requestModel.DepartmentName),
+                    new SqlParameter("@IsActive", true)
+                };
 
-            List<SqlParameter> duplicateParameters = new()
-            {
-                new SqlParameter("@DepartmentName", requestModel.DepartmentName),
-                new SqlParameter("@IsActive",true)
-            };
+            DataTable departments = _adoDotNetServices.QueryFirstOrDefault(
+                duplicateQuery,
+                duplicateParameters.ToArray()
+            );
+            if (departments.Rows.Count > 0)
+                return BadRequest("Department with this name already exist.");
 
-            DataTable departments = _adoDotNetServices.QueryFirstOrDefault(duplicateQuery, duplicateParameters.ToArray());
-            if (departments.Rows.Count > 0) return BadRequest("Department with this name already exist");
-
-            string query = @"INSERT INTO [dbo].[DepartmentTable]
-           ([DepartmentName]
-           ,[IsActive])
-     VALUES (@DepartmentName, @IsActive)";
-
-            List<SqlParameter> parameters = new()
-            {
-                new SqlParameter("@DepartmentName", requestModel.DepartmentName),
-                new SqlParameter("@IsActive",true)
-            };
+            string query = DepartmentQuery.InsertDepartmentQuery();
+            List<SqlParameter> parameters =
+                new()
+                {
+                    new SqlParameter("@DepartmentName", requestModel.DepartmentName),
+                    new SqlParameter("@IsActive", true)
+                };
 
             int result = _adoDotNetServices.Execute(query, parameters.ToArray());
 
-            return result > 0 ? StatusCode(201, "Create Successfully") : BadRequest("Create Fail");
-
-
-        } catch (Exception ex)
+            return result > 0
+                ? StatusCode(201, "Creating Successfully")
+                : BadRequest("Creating Fail");
+        }
+        catch (Exception ex)
         {
-            throw new Exception(ex.Message);
+            return StatusCode(500, ex.Message);
         }
     }
 
@@ -145,79 +110,85 @@ public class DepartmentController : ControllerBase
     {
         try
         {
-            string checkExistQuery = @"SELECT [DepartmentId]
-      ,[DepartmentName]
-      ,[IsActive]
-  FROM [dbo].[DepartmentTable] WHERE DepartmentId = @DepartmentId";
-            List<SqlParameter> existenceParameters = new()
-            {
-                new SqlParameter("@DepartmentId", id)
-            };
+            if (id <= 0)
+                return BadRequest("Id is invalid.");
 
-            DataTable existQuery = _adoDotNetServices.QueryFirstOrDefault(checkExistQuery, existenceParameters.ToArray());
+            string checkExistQuery = DepartmentQuery.GetCheckDepartmentExistsQuery();
+            List<SqlParameter> existenceParameters =
+                new() { new SqlParameter("@DepartmentId", id) };
+
+            DataTable existQuery = _adoDotNetServices.QueryFirstOrDefault(
+                checkExistQuery,
+                existenceParameters.ToArray()
+            );
             if (existQuery.Rows.Count == 0)
                 return NotFound("Role not found");
 
-            // Validate
-            if (string.IsNullOrEmpty(requestModel.DepartmentName))
+            if (requestModel.DepartmentName.IsNullOrEmpty())
                 return BadRequest("Department name does not allow empty");
 
-            // Check for duplicate role name (excluding the current role)
-            string duplicateRoleQuery = @"SELECT COUNT(*) FROM [dbo].[DepartmentTable] WHERE DepartmentName = @DepartmentName AND DepartmentId != @DepartmentId";
-            List<SqlParameter> duplicateRoleParameters = new()
-            {
-                new SqlParameter("@DepartmentName", requestModel.DepartmentName),
-                new SqlParameter("@DepartmentId", id)
-            };
-            int duplicateCount = Convert.ToInt32(_adoDotNetServices.QueryFirstOrDefault(duplicateRoleQuery, duplicateRoleParameters.ToArray()).Rows[0][0]);
-            if (duplicateCount > 0)
-            {
-                return Conflict("This department already exists");
-            }
+            #region Check for duplicate role name (excluding the current role)
 
-            // Update role record
-            string updateQuery = @"UPDATE [dbo].[DepartmentTable] SET DepartmentName = @DepartmentName WHERE [DepartmentId] = @DepartmentId";
-            List<SqlParameter> updateParameters = new()
-            {
-                new SqlParameter("@DepartmentName", requestModel.DepartmentName),
-                new SqlParameter("@DepartmentId", id)
-            };
+            string duplicateRoleQuery = DepartmentQuery.GetCheckDuplicateRoleQuery();
+            List<SqlParameter> duplicateRoleParameters =
+                new()
+                {
+                    new SqlParameter("@DepartmentName", requestModel.DepartmentName),
+                    new SqlParameter("@DepartmentId", id)
+                };
+            int duplicateCount = Convert.ToInt32(
+                _adoDotNetServices
+                    .QueryFirstOrDefault(duplicateRoleQuery, duplicateRoleParameters.ToArray())
+                    .Rows[0][0]
+            );
+            if (duplicateCount > 0)
+                return Conflict("This department already exists");
+
+            #endregion
+
+            #region Update role record
+
+            string updateQuery = DepartmentQuery.GetUpdateDepartmentQuery();
+            List<SqlParameter> updateParameters =
+                new()
+                {
+                    new SqlParameter("@DepartmentName", requestModel.DepartmentName),
+                    new SqlParameter("@DepartmentId", id)
+                };
             int rowsAffected = _adoDotNetServices.Execute(updateQuery, updateParameters.ToArray());
-            if (rowsAffected > 0)
-            {
-                return Ok("Updated successfully");
-            }
-            else
-            {
-                return BadRequest("Failed to update");
-            }
+
+            #endregion
+
+            return rowsAffected > 0 ? Ok("Updated successfully") : BadRequest("Failed to update.");
         }
         catch (Exception ex)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            return StatusCode(500, ex.Message);
         }
     }
 
     [HttpPut]
     [Route("/api/delete-department/{id}")]
-
-    public IActionResult deleteDepartment(long id)
+    public IActionResult DeleteDepartment(long id)
     {
         try
         {
-            string query = @"UPDATE [dbo].[DepartmentTable]
-   SET IsActive = @IsActive
- WHERE DepartmentId = @DepartmentId";
+            if (id <= 0)
+                return BadRequest("Id is invalid.");
 
-            List<SqlParameter> parameter = new()
-            {
-
-                new SqlParameter("@IsActive", false),
-                new SqlParameter("@DepartmentId", id)
-            };
+            string query = DepartmentQuery.GetDeleteDepartmentQuery();
+            List<SqlParameter> parameter =
+                new()
+                {
+                    new SqlParameter("@IsActive", false),
+                    new SqlParameter("@DepartmentId", id)
+                };
 
             int result = _adoDotNetServices.Execute(query, parameter.ToArray());
-            return result > 0 ? StatusCode(201, "Delete Successful") : BadRequest("Delete Fail");
+
+            return result > 0
+                ? StatusCode(201, "Deleting Successful")
+                : BadRequest("Deleting Fail");
         }
         catch (Exception ex)
         {
