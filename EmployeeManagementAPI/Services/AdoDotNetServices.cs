@@ -1,8 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
+﻿using System.Data;
 using System.Data.SqlClient;
-using System.Data;
-
+using Newtonsoft.Json;
 
 namespace EmployeeManagementAPI.Services;
 
