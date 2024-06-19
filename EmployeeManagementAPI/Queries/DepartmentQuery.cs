@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Components.Server;
+﻿namespace EmployeeManagementAPI.Queries;
 
-namespace EmployeeManagementAPI.Queries
+public class DepartmentQuery
 {
-    public class DepartmentQuery
+    public static string GetDepartmentListQuery()
     {
-        public static string GetDepartmentListQuery()
-        {
-            return @"
+        return @"
             SELECT 
                 d.[DepartmentId],
                 d.[DepartmentName],
@@ -20,11 +18,11 @@ namespace EmployeeManagementAPI.Queries
                 d.[IsActive] = @IsActive
             GROUP BY 
                 d.[DepartmentId], d.[DepartmentName], d.[IsActive]";
-        }
+    }
 
-        public static string GetDepartmentByIdQuery()
-        {
-            return @"
+    public static string GetDepartmentByIdQuery()
+    {
+        return @"
         SELECT 
             d.[DepartmentId],
             d.[DepartmentName],
@@ -38,47 +36,46 @@ namespace EmployeeManagementAPI.Queries
             d.[DepartmentId] = @DepartmentId
         GROUP BY 
             d.[DepartmentId], d.[DepartmentName], d.[IsActive]";
-        }
+    }
 
-        public static string GetCheckDepartmentNameDuplicateQuery()
-        {
-            return @"SELECT [DepartmentId]
+    public static string GetCheckDepartmentNameDuplicateQuery()
+    {
+        return @"SELECT [DepartmentId]
       ,[DepartmentName]
       ,[IsActive]
   FROM [dbo].[DepartmentTable] WHERE DepartmentName = @DepartmentName AND IsActive = @IsActive";
-        }
+    }
 
-        public static string InsertDepartmentQuery()
-        {
-            return @"INSERT INTO [dbo].[DepartmentTable]
+    public static string InsertDepartmentQuery()
+    {
+        return @"INSERT INTO [dbo].[DepartmentTable]
            ([DepartmentName]
            ,[IsActive])
      VALUES (@DepartmentName, @IsActive)";
-        }
+    }
 
-        public static string GetCheckDepartmentExistsQuery()
-        {
-            return @"SELECT [DepartmentId]
+    public static string GetCheckDepartmentExistsQuery()
+    {
+        return @"SELECT [DepartmentId]
       ,[DepartmentName]
       ,[IsActive]
   FROM [dbo].[DepartmentTable] WHERE DepartmentId = @DepartmentId";
-        }
+    }
 
-        public static string GetCheckDuplicateRoleQuery()
-        {
-            return @"SELECT COUNT(*) FROM [dbo].[DepartmentTable] WHERE DepartmentName = @DepartmentName AND DepartmentId != @DepartmentId";
-        }
+    public static string GetCheckDuplicateRoleQuery()
+    {
+        return @"SELECT COUNT(*) FROM [dbo].[DepartmentTable] WHERE DepartmentName = @DepartmentName AND DepartmentId != @DepartmentId";
+    }
 
-        public static string GetUpdateDepartmentQuery()
-        {
-            return @"UPDATE [dbo].[DepartmentTable] SET DepartmentName = @DepartmentName WHERE [DepartmentId] = @DepartmentId";
-        }
+    public static string GetUpdateDepartmentQuery()
+    {
+        return @"UPDATE [dbo].[DepartmentTable] SET DepartmentName = @DepartmentName WHERE [DepartmentId] = @DepartmentId";
+    }
 
-        public static string GetDeleteDepartmentQuery()
-        {
-            return @"UPDATE [dbo].[DepartmentTable]
+    public static string GetDeleteDepartmentQuery()
+    {
+        return @"UPDATE [dbo].[DepartmentTable]
    SET IsActive = @IsActive
  WHERE DepartmentId = @DepartmentId";
-        }
     }
 }
