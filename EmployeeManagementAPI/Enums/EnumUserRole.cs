@@ -1,8 +1,7 @@
-﻿namespace EmployeeManagementAPI.Enums
+﻿namespace EmployeeManagementAPI.Enums;
+
+public enum EnumUserRole
 {
-    public enum EnumUserRole
-    {
-        None,
-        Admin
-    }
+    None,
+    Admin
 }
