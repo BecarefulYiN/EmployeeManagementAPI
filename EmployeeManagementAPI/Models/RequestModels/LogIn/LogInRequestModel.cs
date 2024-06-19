@@ -1,7 +1,6 @@
-﻿namespace EmployeeManagementAPI.Models.RequestModels.LogIn
+﻿namespace EmployeeManagementAPI.Models.RequestModels.LogIn;
+
+public class LogInRequestModel
 {
-    public class LogInRequestModel
-    {
-        public string Email { get; set; }
-    }
+    public string Email { get; set; }
 }

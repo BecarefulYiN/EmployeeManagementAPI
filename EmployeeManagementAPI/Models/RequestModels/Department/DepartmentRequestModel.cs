@@ -3,5 +3,4 @@
 public class DepartmentRequestModel
 {
     public string DepartmentName { get; set; }
-
 }

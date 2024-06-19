@@ -1,4 +1,4 @@
-﻿namespace EmployeeManagementAPI.Models.ResponseModesl.Department;
+﻿namespace EmployeeManagementAPI.Models.ResponseModels.Department;
 
 public class GetDepartmentResponseModel
 {

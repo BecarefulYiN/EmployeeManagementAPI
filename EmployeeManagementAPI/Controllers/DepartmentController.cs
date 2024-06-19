@@ -1,7 +1,7 @@
 ﻿using EmployeeManagementAPI.Models.Entities;
 using EmployeeManagementAPI.Models.RequestModels.Department;
 using EmployeeManagementAPI.Models.RequestModels.Employee_Role;
-using EmployeeManagementAPI.Models.ResponseModesl.Department;
+using EmployeeManagementAPI.Models.ResponseModels.Department;
 using EmployeeManagementAPI.Models.ResponseModesl.Employee;
 using EmployeeManagementAPI.Services;
 using Microsoft.AspNetCore.Http;
